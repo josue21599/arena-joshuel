@@ -61,8 +61,10 @@ class Renderer {
             canvas.drawRect(x - 28f, ry - 28f, x + 28f, ry + 28f, paint)
         }
 
+        for (z in s.zones) if (z.spell.duration > 0f) drawZone(canvas, z)
         for (t in s.towers) drawTower(canvas, t)
         for (u in s.units) drawUnit(canvas, u)
+        for (z in s.zones) if (z.spell.duration <= 0f) drawZone(canvas, z)
         paint.style = Paint.Style.FILL
         paint.color = Color.YELLOW
         for (p in s.projectiles) canvas.drawCircle(p.x, p.y, 3f, paint)
@@ -180,6 +182,39 @@ class Renderer {
         paint.color = Color.rgb(60, 220, 80)
         rect.set(u.x - u.radius, by, u.x - u.radius + u.radius * 2f * (u.hp / u.maxHp).coerceIn(0f, 1f), by + 4f)
         canvas.drawRect(rect, paint)
+    }
+
+    private fun drawZone(canvas: Canvas, z: com.josue.arenajoshuel.model.SpellZone) {
+        val r = z.spell.radius
+        paint.style = Paint.Style.FILL
+        if (z.spell.duration > 0f) {
+            val fade = ((z.life - z.age) / 1f).coerceIn(0f, 1f)
+            val pulse = 1f + 0.04f * Math.sin(z.age * 6.0).toFloat()
+            paint.color = Color.argb((90 * fade).toInt(), 60, 200, 60)
+            canvas.drawCircle(z.x, z.y, r * pulse, paint)
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = 2f
+            paint.color = Color.argb((255 * fade).toInt(), 40, 160, 40)
+            canvas.drawCircle(z.x, z.y, r * pulse, paint)
+            return
+        }
+        // Flechas: caen desde la torre rey hacia el objetivo
+        val k = (z.age / 0.5f).coerceIn(0f, 1f)
+        paint.color = Color.argb(((1f - k) * 70).toInt(), 255, 230, 120)
+        canvas.drawCircle(z.x, z.y, r, paint)
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 2f
+        paint.color = Color.argb(((1f - k) * 255).toInt(), 240, 230, 200)
+        val f = (k * 2f).coerceAtMost(1f)
+        for (i in 0 until 7) {
+            val a = i * 0.9
+            val tx = z.x + (Math.cos(a) * r * 0.7 * (i % 3 + 1) / 3).toFloat()
+            val ty = z.y + (Math.sin(a) * r * 0.7 * (i % 3 + 1) / 3).toFloat()
+            val hx = z.fromX + (tx - z.fromX) * f
+            val hy = z.fromY + (ty - z.fromY) * f
+            val tl = maxOf(f - 0.12f, 0f)
+            canvas.drawLine(z.fromX + (tx - z.fromX) * tl, z.fromY + (ty - z.fromY) * tl, hx, hy, paint)
+        }
     }
 
     private fun drawBlast(canvas: Canvas, b: com.josue.arenajoshuel.model.Blast) {

@@ -3,7 +3,7 @@
 ## Stack fijo (no cambiar sin preguntar)
 - Kotlin, Android nativo, Gradle Kotlin DSL (proyecto creado con el wizard de Android Studio).
 - Renderizado 2D con `SurfaceView` + `Canvas`. Sin motores ni librerías externas de juego.
-- Sin Compose, sin red, sin base de datos. Todo local, partida contra la CPU.
+- Sin Compose, sin red, sin base de datos. Todo local, partida contra la CPU. Persistencia local permitida con SharedPreferences (mazo y cartas desbloqueadas).
 - Gráficos con formas y colores dibujados en Canvas (sin assets de juegos existentes).
 - Orientación vertical, pantalla completa.
 
@@ -39,4 +39,7 @@
 - Fase 4: ai/CpuPlayer (mazo y elixir propios, defensa con carta útil más barata, ataque por carril de torre más dañada, retardo aleatorio, dificultad EASY/MEDIUM/HARD, MEDIUM por defecto sin selector aún); GameState.spawn/cpu (compila).
 - Fase 5: temporizador 3 min, elixir x2 último minuto, coronas, victoria/derrota/empate, MenuActivity (Jugar + dificultad), ResultActivity (revancha), pausa en onPause (compila).
 - Fase 6: números de daño, destello al golpe, explosión de torre destruida; balance de cartas (Duendes/Esqueletos/Mini/Príncipe/Mosquetera nerfeados, Caballero/Arquera ajustados); APK debug generada (compila).
+- Fase 7: hechizos: cards/SpellDef (radio, daño, factor a torres, duración); Flechas (instantáneas, desde torre rey) y Veneno (8 s, círculo verde) sustituyen a Esqueletos/Mini en el mazo; GameState.castSpell/zones; CPU los lanza sobre grupos de 3+ (compila).
+- Fase 8: colección de 14 cartas (4 tropas nuevas: Lancero/Guardián/Alquimista/Corredor; 4 bloqueadas, se desbloquea una al azar al ganar); DeckActivity (cuadrícula + 8 huecos + elixir medio); DeckStore (SharedPreferences); mazo de 8 obligatorio para jugar (compila).
+- Fase 9: cofre tras victoria (ResultActivity "Abrir cofre" → ChestActivity/render/ChestView: tiembla, abre al tocar, revela 3 cartas); DeckStore.openChest desbloquea o suma copias (contador xN en la colección, sin niveles); sustituye al desbloqueo aleatorio por victoria (compila).
 - Pendiente: pulido (no definido).

@@ -14,7 +14,8 @@ class CardDef(
     val ranged: Boolean = false,
     val count: Int = 1,
     val radius: Float = 8f,
+    val spell: SpellDef? = null,
 ) {
     /** Puede defender: ataca unidades terrestres. */
-    val canDefend: Boolean get() = targets == TargetType.GROUND
+    val canDefend: Boolean get() = spell == null && targets == TargetType.GROUND
 }

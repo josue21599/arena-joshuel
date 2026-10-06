@@ -8,6 +8,7 @@ import com.josue.arenajoshuel.model.Lane
 import com.josue.arenajoshuel.model.Team
 import com.josue.arenajoshuel.model.Unit
 import kotlin.math.abs
+import kotlin.math.hypot
 import kotlin.random.Random
 
 enum class Difficulty(val minDelay: Float, val maxDelay: Float, val attackElixir: Int) {
@@ -18,7 +19,7 @@ enum class Difficulty(val minDelay: Float, val maxDelay: Float, val attackElixir
 
 class CpuPlayer(private val state: GameState, private val difficulty: Difficulty = Difficulty.MEDIUM) {
     val elixir = ElixirBar()
-    val deck = Deck(CardDefs.ALL.shuffled())
+    val deck = Deck(CardDefs.ALL.shuffled().take(8))
 
     private var delay = -1f // <0: sin reacción pendiente
     private val answered = HashSet<Unit>()
@@ -28,7 +29,7 @@ class CpuPlayer(private val state: GameState, private val difficulty: Difficulty
         answered.retainAll { it.alive }
 
         if (delay < 0f) {
-            if (threat() != null || elixir.value >= difficulty.attackElixir) {
+            if (threat() != null || spellPlan() != null || elixir.value >= difficulty.attackElixir) {
                 delay = Random.nextFloat() * (difficulty.maxDelay - difficulty.minDelay) + difficulty.minDelay
             }
             return
@@ -45,7 +46,27 @@ class CpuPlayer(private val state: GameState, private val difficulty: Difficulty
             it.team == Team.PLAYER && it.alive && it.y < GameState.RIVER_Y - GameState.RIVER_HALF && it !in answered
         }
 
+    /** Hechizo asequible y centro de un grupo de 3+ unidades del jugador a su alcance. */
+    private fun spellPlan(): Pair<Int, Unit>? {
+        val enemies = state.units.filter { it.team == Team.PLAYER && it.alive }
+        if (enemies.size < 3) return null
+        for (i in deck.hand.indices) {
+            val sp = deck.hand[i].spell ?: continue
+            if (!elixir.canSpend(deck.hand[i].cost)) continue
+            val center = enemies.maxByOrNull { c -> enemies.count { hypot(it.x - c.x, it.y - c.y) <= sp.radius } }
+                ?: continue
+            if (enemies.count { hypot(it.x - center.x, it.y - center.y) <= sp.radius } >= 3) return i to center
+        }
+        return null
+    }
+
     private fun act() {
+        spellPlan()?.let { (idx, c) ->
+            val card = deck.play(idx)
+            elixir.spend(card.cost)
+            state.castSpell(card.spell!!, Team.CPU, c.x, c.y)
+            return
+        }
         val t = threat()
         if (t != null) {
             // Defensa: carta útil más barata que se pueda pagar
@@ -62,7 +83,7 @@ class CpuPlayer(private val state: GameState, private val difficulty: Difficulty
         if (elixir.value >= difficulty.attackElixir) {
             // Ataque: carril de la torre del jugador más dañada; carta más cara posible
             val idx = deck.hand.indices
-                .filter { elixir.canSpend(deck.hand[it].cost) }
+                .filter { deck.hand[it].spell == null && elixir.canSpend(deck.hand[it].cost) }
                 .maxByOrNull { deck.hand[it].cost } ?: return
             play(idx, weakestLane(), 230f)
         }

@@ -8,6 +8,8 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import android.app.Activity
+import androidx.activity.result.contract.ActivityResultContracts
 import com.josue.arenajoshuel.model.Result
 
 class ResultActivity : AppCompatActivity() {
@@ -27,6 +29,17 @@ class ResultActivity : AppCompatActivity() {
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
         })
+        if (result == Result.WIN) {
+            val chestBtn = Button(this).apply { text = "Abrir cofre" }
+            val launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                if (it.resultCode == Activity.RESULT_OK) {
+                    chestBtn.isEnabled = false
+                    chestBtn.text = "Cofre abierto"
+                }
+            }
+            chestBtn.setOnClickListener { launcher.launch(Intent(this, ChestActivity::class.java)) }
+            root.addView(chestBtn)
+        }
         root.addView(Button(this).apply {
             text = "Revancha"
             setOnClickListener {

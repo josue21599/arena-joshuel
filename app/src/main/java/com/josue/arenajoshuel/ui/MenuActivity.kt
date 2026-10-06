@@ -7,6 +7,8 @@ import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
+import com.josue.arenajoshuel.cards.DeckStore
 import androidx.appcompat.app.AppCompatActivity
 import com.josue.arenajoshuel.ai.Difficulty
 
@@ -38,6 +40,11 @@ class MenuActivity : AppCompatActivity() {
         val play = Button(this).apply {
             text = "Jugar"
             setOnClickListener {
+                if (DeckStore.playableDeck(this@MenuActivity) == null) {
+                    Toast.makeText(this@MenuActivity, "Completa tu mazo de 8 cartas", Toast.LENGTH_SHORT).show()
+                    startActivity(Intent(this@MenuActivity, DeckActivity::class.java))
+                    return@setOnClickListener
+                }
                 startActivity(
                     Intent(this@MenuActivity, MainActivity::class.java)
                         .putExtra(MainActivity.EXTRA_DIFFICULTY, difficulty.name)
@@ -45,6 +52,10 @@ class MenuActivity : AppCompatActivity() {
             }
         }
         root.addView(play)
+        root.addView(Button(this).apply {
+            text = "Mazo"
+            setOnClickListener { startActivity(Intent(this@MenuActivity, DeckActivity::class.java)) }
+        })
         root.addView(diffBtn)
         setContentView(root)
     }

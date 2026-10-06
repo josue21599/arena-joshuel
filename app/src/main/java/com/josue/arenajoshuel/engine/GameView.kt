@@ -5,6 +5,7 @@ import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import com.josue.arenajoshuel.ai.Difficulty
+import com.josue.arenajoshuel.cards.CardDef
 import com.josue.arenajoshuel.model.GameState
 import com.josue.arenajoshuel.model.Lane
 import com.josue.arenajoshuel.model.Result
@@ -13,9 +14,10 @@ import com.josue.arenajoshuel.render.Renderer
 class GameView(
     context: Context,
     difficulty: Difficulty,
+    playerCards: List<CardDef>,
     private val onResult: (Result) -> Unit,
 ) : SurfaceView(context), SurfaceHolder.Callback {
-    private val state = GameState(difficulty)
+    private val state = GameState(difficulty, playerCards)
     private var reported = false
     private val renderer = Renderer()
     private var loop: GameLoop? = null
@@ -39,7 +41,6 @@ class GameView(
     }
 
     fun pause() { state.paused = true }
-
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.actionMasked != MotionEvent.ACTION_DOWN) return true
         if (state.paused) { state.paused = false; return true }
@@ -49,6 +50,10 @@ class GameView(
         if (wy >= GameState.WORLD_H) {
             val i = Renderer.cardAt(wx, wy)
             if (i >= 0) state.selected = if (state.selected == i) -1 else i
+        } else if (state.selected >= 0 && wx in 0f..GameState.WORLD_W &&
+            state.playerDeck.hand.getOrNull(state.selected)?.spell != null
+        ) {
+            state.requestDeploy(state.selected, if (wx < GameState.WORLD_W / 2f) Lane.LEFT else Lane.RIGHT, wy, wx)
         } else if (state.selected >= 0 && wx in 0f..GameState.WORLD_W &&
             wy > GameState.RIVER_Y + GameState.RIVER_HALF
         ) {

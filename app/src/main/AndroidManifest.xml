@@ -22,6 +22,14 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".ui.ChestActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+        <activity
+            android:name=".ui.DeckActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+        <activity
             android:name=".ui.MainActivity"
             android:screenOrientation="portrait"
             android:exported="false" />

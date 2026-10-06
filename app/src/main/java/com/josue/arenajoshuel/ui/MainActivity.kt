@@ -7,6 +7,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import android.content.Intent
 import com.josue.arenajoshuel.ai.Difficulty
+import com.josue.arenajoshuel.cards.CardDefs
+import com.josue.arenajoshuel.cards.DeckStore
 import com.josue.arenajoshuel.engine.GameView
 
 class MainActivity : AppCompatActivity() {
@@ -20,7 +22,8 @@ class MainActivity : AppCompatActivity() {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
         val diff = Difficulty.valueOf(intent.getStringExtra(EXTRA_DIFFICULTY) ?: Difficulty.MEDIUM.name)
-        val v = GameView(this, diff) { r ->
+        val cards = DeckStore.playableDeck(this) ?: CardDefs.STARTER_DECK
+        val v = GameView(this, diff, cards) { r ->
             startActivity(
                 Intent(this, ResultActivity::class.java)
                     .putExtra(ResultActivity.EXTRA_RESULT, r.name)

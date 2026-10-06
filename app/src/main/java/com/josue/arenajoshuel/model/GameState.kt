@@ -6,6 +6,7 @@ import com.josue.arenajoshuel.cards.CardDef
 import com.josue.arenajoshuel.cards.CardDefs
 import com.josue.arenajoshuel.cards.Deck
 import com.josue.arenajoshuel.cards.ElixirBar
+import com.josue.arenajoshuel.cards.SpellDef
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.math.abs
 import kotlin.math.hypot
@@ -17,7 +18,17 @@ class DamageText(val x: Float, val y: Float, val amount: Int, val team: Team, va
 /** Explosión de torre destruida. */
 class Blast(val x: Float, val y: Float, val big: Boolean, var age: Float = 0f)
 
-class GameState(difficulty: Difficulty = Difficulty.MEDIUM) {
+/** Hechizo activo: flechas (instantáneo, breve animación) o zona de veneno. */
+class SpellZone(val spell: SpellDef, val team: Team, val x: Float, val y: Float, val fromX: Float, val fromY: Float) {
+    var age = 0f
+    var tick = 0f
+    val life: Float get() = if (spell.duration > 0f) spell.duration else 0.5f
+}
+
+class GameState(
+    difficulty: Difficulty = Difficulty.MEDIUM,
+    playerCards: List<CardDef> = CardDefs.STARTER_DECK,
+) {
     companion object {
         const val WORLD_W = 360f
         const val WORLD_H = 640f
@@ -49,18 +60,38 @@ class GameState(difficulty: Difficulty = Difficulty.MEDIUM) {
     val projectiles = ArrayList<Projectile>()
     val texts = ArrayList<DamageText>()
     val blasts = ArrayList<Blast>()
+    val zones = ArrayList<SpellZone>()
     private val wasAlive = HashSet<Tower>(towers)
 
-    class Deploy(val handIndex: Int, val lane: Lane, val y: Float)
+    class Deploy(val handIndex: Int, val lane: Lane, val y: Float, val x: Float)
 
     private val deployQueue = ConcurrentLinkedQueue<Deploy>()
     val playerElixir = ElixirBar()
-    val playerDeck = Deck(CardDefs.ALL.shuffled())
+    val playerDeck = Deck(playerCards.shuffled())
     @Volatile var selected = -1
 
-    /** Se llama desde el hilo de UI; se procesa en el bucle. */
-    fun requestDeploy(handIndex: Int, lane: Lane, y: Float) {
-        deployQueue.add(Deploy(handIndex, lane, y))
+    /** Se llama desde el hilo de UI; se procesa en el bucle. x solo importa para hechizos. */
+    fun requestDeploy(handIndex: Int, lane: Lane, y: Float, x: Float = laneX(lane)) {
+        deployQueue.add(Deploy(handIndex, lane, y, x))
+    }
+
+    /** Lanza un hechizo en (x, y); las flechas parten de la torre rey del lanzador. */
+    fun castSpell(spell: SpellDef, team: Team, x: Float, y: Float) {
+        val king = towers.first { it.isKing && it.team == team }
+        val z = SpellZone(spell, team, x, y, king.x, king.y)
+        zones += z
+        if (spell.duration <= 0f) applySpell(z, spell.damage)
+    }
+
+    private fun applySpell(z: SpellZone, dmg: Float) {
+        for (u in units) {
+            if (u.team != z.team && u.alive && dist(z.x, z.y, u) <= z.spell.radius + u.radius) hit(u, dmg)
+        }
+        for (t in towers) {
+            if (t.team != z.team && t.alive && dist(z.x, z.y, t) - t.radius <= z.spell.radius) {
+                hit(t, dmg * z.spell.towerFactor)
+            }
+        }
     }
 
     fun laneX(lane: Lane) = if (lane == Lane.LEFT) LANE_LEFT_X else LANE_RIGHT_X
@@ -97,9 +128,18 @@ class GameState(difficulty: Difficulty = Difficulty.MEDIUM) {
             if (!playerElixir.canSpend(card.cost)) continue
             playerDeck.play(d.handIndex)
             playerElixir.spend(card.cost)
-            spawn(card, Team.PLAYER, d.lane, d.y)
+            val sp = card.spell
+            if (sp != null) castSpell(sp, Team.PLAYER, d.x, d.y) else spawn(card, Team.PLAYER, d.lane, d.y)
             selected = -1
         }
+        for (z in zones) {
+            z.age += DT
+            if (z.spell.duration > 0f) {
+                z.tick += DT
+                if (z.tick >= 0.5f) { z.tick -= 0.5f; applySpell(z, z.spell.damage * 0.5f) }
+            }
+        }
+        zones.removeAll { it.age >= it.life }
         for (u in units) updateUnit(u)
         for (t in towers) updateTower(t)
         for (p in projectiles) updateProjectile(p)
